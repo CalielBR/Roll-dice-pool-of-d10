@@ -1,0 +1,116 @@
+/**
+ * Roll a changling dice pool roll
+ * Author: Caerandir
+ */
+
+new Dialog({
+	title: `Roll dice pool of d10`,
+	content: `
+		<form>
+			<div style="display: flex; width: 100%; margin-bottom: 10px">
+				<label for="numberOfDice" style="white-space: nowrap; margin-right: 10px; padding-top:4px">Number of d10:</label>
+				<input type="number" id="numberOfDice" name="numberOfDice" min="1" max="20" autofocus />
+			</div>
+			<div style="display: flex; width: 100%; margin-bottom: 10px">
+				<label for="diificulty" style="white-space: nowrap; margin-right: 10px; padding-top:4px">Difficulty:</label>
+			</div>
+			<div style="display: flex; width: 100%; margin-bottom: 10px">
+			      	<input type="radio" id="d2" name="difficulty" value="2" />
+			      	<label for="normal" style="white-space: nowrap; margin-left: 4px; margin-right: 7px; padding-top:4px">2</label>
+			      	<input type="radio" id="d3" name="difficulty" value="3" />
+			      	<label for="normal" style="white-space: nowrap; margin-left: 4px; margin-right: 7px; padding-top:4px">3</label>
+			      	<input type="radio" id="d4" name="difficulty" value="4" />
+			      	<label for="normal" style="white-space: nowrap; margin-left: 4px; margin-right: 7px; padding-top:4px">4</label>
+			      	<input type="radio" id="d5" name="difficulty" value="5" />
+			      	<label for="normal" style="white-space: nowrap; margin-left: 4px; margin-right: 7px; padding-top:4px">5</label>
+			      	<input type="radio" id="d6" name="difficulty" value="6" checked="checked" />
+			      	<label for="normal" style="white-space: nowrap; margin-left: 4px; margin-right: 7px; padding-top:4px">6</label>
+			      	<input type="radio" id="d7" name="difficulty" value="7" />
+			      	<label for="normal" style="white-space: nowrap; margin-left: 4px; margin-right: 7px; padding-top:4px">7</label>
+			      	<input type="radio" id="d8" name="difficulty" value="8" />
+			      	<label for="normal" style="white-space: nowrap; margin-left: 4px; margin-right: 7px; padding-top:4px">8</label>
+			      	<input type="radio" id="d9" name="difficulty" value="9" />
+			      	<label for="normal" style="white-space: nowrap; margin-left: 4px; margin-right: 7px; padding-top:4px">9</label>
+			      	<input type="radio" id="d10" name="difficulty" value="10" />
+			      	<label for="normal" style="white-space: nowrap; margin-left: 4px; margin-right: 7px; padding-top:4px">10</label>
+			</div>			
+			<div style="display: flex; width: 100%; margin-bottom: 10px">
+				<label for="exploding" style="white-space: nowrap; margin-right: 10px; padding-top:4px">Exploding?</label>
+				<input type="checkbox" id="exploding" name="exploding" />
+			</div>
+			<div style="display: flex; width: 100%; margin-bottom: 10px">
+			      	<input type="radio" id="roll" name="rollMode" value="roll" checked="checked" />
+			      	<label for="normal" style="white-space: nowrap; margin-left: 5px; margin-right: 10px; padding-top:4px">Normal roll</label>
+			      	<input type="radio" id="gmroll" name="rollMode" value="gmroll" />
+			      	<label for="gm" style="white-space: nowrap; margin-left: 5px; margin-right: 10px; padding-top:4px">GM roll</label>
+			      	<input type="radio" id="blindroll" name="rollMode" value="blindroll" />
+			      	<label for="blind" style="white-space: nowrap; margin-left: 5px; margin-right: 10px; padding-top:4px">Blind roll</label>
+			      	<input type="radio" id="selfroll" name="rollMode" value="selfroll" />
+			      	<label for="self" style="white-space: nowrap; margin-left: 5px; margin-right: 10px; padding-top:4px">Self roll</label>
+			</div>			
+			<div style="display: flex; width: 100%; margin-bottom: 10px">
+				<p>Normal roll: Visible to everyone<br />
+				GM roll: Visible to rolling player & GM<br />
+				Bild roll: Result only visible to GM<br />
+				Self roll: Only visible to player</p>
+			</div>
+		</form>
+	`,
+	buttons: {
+		yes: {
+			icon: "<i class='fas fa-check'></i>",
+			label: `Roll!`,
+			callback: async (html) => {
+				let numberOfDice = html.find('#numberOfDice').val();
+				let difficulty = html.find('[name="difficulty"]:checked').val();
+				let exploding = html.find('input#exploding')[0].checked;
+				if (!numberOfDice) {
+					return ui.notifications.info("Please enter number of d10.");
+				}
+				let rollCommand = numberOfDice;
+				rollCommand = rollCommand.concat ('d10');
+				if (exploding) {
+					rollCommand = rollCommand.concat('x10');
+				}
+				rollCommand = rollCommand.concat ('cs>=', difficulty, 'df1');
+				const roll = new Roll(rollCommand);
+				await roll.roll();
+				let resultMessage = "";
+				if (roll.result == 1) {
+					resultMessage = "Marginal success";
+				} else if (roll.result == 2) {
+					resultMessage = "Moderate success";
+				} else if (roll.result == 3) {
+					resultMessage = "Complete success";
+				} else if (roll.result == 4) {
+					resultMessage = "Exceptional success";
+				} else if (roll.result > 4) {
+					resultMessage = "Phenomenal success";
+				} else if (roll.result < 0) {
+					resultMessage = "Botch";
+				} else {
+					resultMessage = "No success";
+				}
+						
+				if (token) {
+					roll.toMessage({
+						flavor: resultMessage,
+						speaker: ChatMessage.getSpeaker(token.actor)},
+						{rollMode: html.find('[name="rollMode"]:checked').val()}
+					);
+				} else {
+					roll.toMessage({
+						flavor: resultMessage},
+						{rollMode: html.find('[name="rollMode"]:checked').val()}
+					);
+				}
+			}
+		},
+		no: {
+			icon: "<i class='fas fa-times'></i>",
+			label: `Cancel`
+		},
+	},
+	default: "yes",
+	render: html => html.find('#numberOfDice').focus()
+}).render(true);
